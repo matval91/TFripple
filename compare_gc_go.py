@@ -6,10 +6,10 @@ Created on Wed Dec  4 12:03:45 2019
 
 @author: vallar
 """
-import a5py.ascot5io.ascot5 as a5
+import a5py.ascot5io.ascot5 as a5class
 from a5py.ascotpy.ascotpy import Ascotpy
 import a5py.marker.evaluate as eval_mrkr
-import a5py.marker.phasespace as ps
+#import a5py.marker.phasespace as ps
 import numpy as np
 import matplotlib.pyplot as plt
 from utils.plot_utils import common_style, limit_labels, define_colors
@@ -21,12 +21,14 @@ def evaluate_derived_quant(a5, orb, id_part):
     # evaluate derived quantities
     try:
         mu = orb['mu']*1.602e-19;
-        ind,pitch,energy,mu,dE,pphi = evaluate_derived_quant_gc(a5, orb, id_part)
+        ind,pitch,energy,mu,dE,pphi, psi = evaluate_derived_quant_gc(a5, orb, id_part)
     except:
-        ind,pitch,energy,mu,dE,pphi = evaluate_derived_quant_go(a5, orb, id_part)
-    return ind, pitch, energy, mu, dE, pphi
+        ind,pitch,energy,mu,dE,pphi, psi = evaluate_derived_quant_go(a5, orb, id_part)
+        
+    return ind, pitch, energy, mu, dE, pphi, psi
         
 def evaluate_derived_quant_gc(a5, orb, id_part):
+    print('GC')
     ind = np.where(orb['id']==id_part)[0]
     mu = orb['mu'][ind]*1.602e-19;
     
@@ -39,19 +41,27 @@ def evaluate_derived_quant_gc(a5, orb, id_part):
                        vpar=orb['vpar'][ind], mu=mu, theta=None,
                        BR=orb['br'][ind], Bphi=orb['bphi'][ind], Bz=orb['bz'][ind], psi=None)
     dE = np.diff(energy, prepend=energy[0])
-    energy=eval_mrkr.eval_guidingcenter('energy', mass=2.*1.66e-27, charge=None,
-                       R=orb['r'][ind], phi=None, z=None,
-                       vpar=orb['vpar'][ind], mu=mu, theta=None,
-                       BR=orb['br'][ind], Bphi=orb['bphi'][ind], Bz=orb['bz'][ind], psi=None)
+    Bn=eval_mrkr.eval_guidingcenter('bnorm', mass=2.*1.66e-27, charge=None,
+                  R=None, phi=None, z=None,
+                  vpar=orb['vpar'][ind], mu=mu, theta=None,
+                  BR=orb['br'][ind], Bphi=orb['bphi'][ind], Bz=orb['bz'][ind], psi=None)  
+   
+    div = a5.evaluate(orb['r'][ind], orb['phi'][ind], orb['z'][ind], 0, "divergence")
+    plt.figure(); plt.plot(div, 'k'); plt.suptitle('GC div {:d}'.format(id_part))
     
-    psi   = a5.evaluate(orb['r'][ind], 0, orb['z'][ind], 0, "psi")
+#    plt.figure(); plt.plot((energy-energy[0])/energy[0]*100., 'k'); plt.suptitle('GC E {:d}'.format(id_part))
+#    plt.figure(); plt.plot((mu-mu[0])/mu[0]*100., 'k'); plt.suptitle('GC mu {:d}'.format(id_part))
+    plt.figure(); plt.plot(np.sqrt(Bn**2-orb['bphi'][ind]**2), 'k'); plt.suptitle('GC bnorm {:d}'.format(id_part))
+
+    psi   = a5.evaluate(orb['r'][ind], orb['phi'][ind], orb['z'][ind], 0, "psi")
     pphi=eval_mrkr.eval_guidingcenter('ptor', mass=2.*1.66e-27, charge=orb['charge'][ind]*1.602e-19,
                        R=orb['r'][ind], phi=None, z=None,
                        vpar=orb['vpar'][ind], mu=mu, theta=None,
                        BR=orb['br'][ind], Bphi=orb['bphi'][ind], Bz=orb['bz'][ind], psi=psi)
-    return ind, pitch, energy, mu, dE, pphi
+    return ind, pitch, energy, mu, dE, pphi, psi
 
 def evaluate_derived_quant_go(a5,orb, id_part):
+    print('GO')
     # evaluate derived quantities
     ind = np.where(orb['id']==id_part)[0]
     pitch=eval_mrkr.eval_particle('pitch', mass=2.*1.66e-27, charge=None,
@@ -62,18 +72,28 @@ def evaluate_derived_quant_go(a5,orb, id_part):
                        R=None, phi=None, z=None,
                        vR=orb['vr'][ind], vphi=orb['vphi'][ind], vz=orb['vz'][ind],
                        BR=orb['br'][ind], Bphi=orb['bphi'][ind], Bz=orb['bz'][ind], psi=None)
-    dE = np.diff(energy, prepend=energy[0])
+    dE = np.diff(energy-energy[0], prepend=energy[0])
     mu=eval_mrkr.eval_particle('mu', mass=2.*1.66e-27, charge=None,
                   R=None, phi=None, z=None,
                   vR=orb['vr'][ind], vphi=orb['vphi'][ind], vz=orb['vz'][ind],
                   BR=orb['br'][ind], Bphi=orb['bphi'][ind], Bz=orb['bz'][ind], psi=None)
     #mu=mu*1.602e-19;
-    psi   = a5.evaluate(orb['r'][ind], 0, orb['z'][ind], 0, "psi")
+    Bn=eval_mrkr.eval_particle('bnorm', mass=2.*1.66e-27, charge=None,
+                  R=None, phi=None, z=None,
+                  BR=orb['br'][ind], Bphi=orb['bphi'][ind], Bz=orb['bz'][ind], psi=None)    
+    div = a5.evaluate(orb['r'][ind], orb['phi'][ind], orb['z'][ind], 0, "divergence")
+    plt.figure(); plt.plot(div, 'r'); plt.suptitle('GO div {:d}'.format(id_part))
+    
+#    plt.figure(); plt.plot((energy-energy[0])/energy[0]*100., 'r'); plt.suptitle('GO E {:d}'.format(id_part))
+#    plt.figure(); plt.plot((mu-mu[0])/mu[0]*100., 'r'); plt.suptitle('GO mu {:d}'.format(id_part))
+    plt.figure(); plt.plot(np.sqrt(Bn**2-orb['bphi'][ind]**2), 'r'); plt.suptitle('GO bnorm {:d}'.format(id_part))
+
+    psi   = a5.evaluate(orb['r'][ind], orb['phi'][ind], orb['z'][ind], 0, "psi")
     pphi=eval_mrkr.eval_particle('ptor', mass=2.*1.66e-27, charge=orb['charge'][ind]*1.602e-19,
               R=orb['r'][ind], phi=None, z=None,
               vR=orb['vr'][ind], vphi=orb['vphi'][ind], vz=orb['vz'][ind],
               BR=None, Bphi=None, Bz=None, psi=psi)
-    return ind, pitch, energy,mu, dE, pphi
+    return ind, pitch, energy,mu, dE, pphi, psi
 
 def evaluate_initial_quant(inistate, id_part):
     print()
@@ -98,9 +118,9 @@ def evaluate_initial_quant(inistate, id_part):
 
 
 fname='/home/vallar/WORK/ASCOT/runs/SA_003/nnb_ripple/production/ascot.h5'
-file=a5.Ascot(fname)
-fgo=file.run_1744124558 # collisions
-fgc=file.run_1659479300 # collisions
+file=a5class.Ascot(fname)
+#fgo=file.run_1744124558 # collisions
+#fgc=file.run_1659479300 # collisions
 
 fgo=file.run_0023840449 # no collisions
 fgc=file.run_1357839974 # no collisions
@@ -120,11 +140,11 @@ ind_gc=np.where(fgc.endstate['endcond']==4)[0]
 ind_go=np.where(fgo.endstate['endcond']==4)[0]
 
 f=plt.figure(figsize=(15,8));
-ax_go_rhopitch = f.add_subplot(241)
-ax_gc_rhopitch = f.add_subplot(245, sharex=ax_go_rhopitch, sharey=ax_go_rhopitch)
-ax_go_rz = f.add_subplot(242)
-ax_gc_rz = f.add_subplot(246, sharex=ax_go_rz)
-axcompare=f.add_subplot(243)
+ax_go_rhopitch = f.add_subplot(243)
+ax_gc_rhopitch = f.add_subplot(247, sharex=ax_go_rhopitch, sharey=ax_go_rhopitch)
+ax_go_rz = f.add_subplot(241)
+ax_gc_rz = f.add_subplot(245, sharex=ax_go_rz)
+axcompare=f.add_subplot(242)
 ax_Emu = f.add_subplot(248)
 ax_pphimu = f.add_subplot(244)
 
@@ -132,8 +152,8 @@ f4=plt.figure();
 ax_tips_rz = f4.add_subplot(121)
 ax_tips_rz.set_title('RZ tips')
 ax_tips_rhopitch = f4.add_subplot(122)
-
-for i in range(3):
+fpsi=plt.figure(); axpsi=fpsi.add_subplot(111)
+for i in [1,4]:
     # find indexes of interest
     id_part = fgc.inistate['id'][ind_gc[i]]
     print("No go. particle to wall")
@@ -145,22 +165,24 @@ for i in range(3):
     #only initial points 
     ind_i_go,mu_ini=evaluate_initial_quant(fgo.inistate, id_part)
     # evaluate derived quantities
-    ind, pitch, energy, mu, dE, pphi = evaluate_derived_quant(a5,orb_go, id_part)
+    ind, pitch, energy, mu, dE, pphi, psi = evaluate_derived_quant(a5, orb_go, id_part)
     energy=energy/1.602e-19; dE=dE/1.602e-19;
-    pphi=pphi/1.602e-19;
+    pphi=pphi/1.602e-19; mu=mu/1.602e-19;
+    if i==1:
+        axpsi.plot(psi, 'r')
     #mu=orb_go['mu'][ind]
     #full orbits
     ax_go_rhopitch.plot(orb_go['rho'][ind], pitch, 'x', color=col[np.mod(i,5)]) 
     ax_go_rz.plot(orb_go['r'][ind], orb_go['z'][ind], 'x', color=col[np.mod(i,5)])
     axcompare.plot(orb_go['r'][ind], orb_go['z'][ind],'x', color=col[np.mod(i,5)], label='go.')
-    ax_Emu.scatter(energy*1e-3, mu/(energy*1.602e-19), marker='x', color=col[np.mod(i,5)])
-    ax_pphimu.scatter(pphi,mu/(energy*1.602e-19),marker='x', color=col[np.mod(i,5)])
+    ax_Emu.scatter(energy*1e-3, mu, marker='x', color=col[np.mod(i,5)])
+    ax_pphimu.scatter(pphi,mu,marker='x', color=col[np.mod(i,5)])
 
     #only initial points
     ax_go_rhopitch.scatter([fgo.inistate['rho'][ind_i_go], orb_go['rho'][ind][-1]], [pitch[0], pitch[-1]], color=col[np.mod(i,5)],  marker='x')
     ax_go_rz.scatter([fgo.inistate['r'][ind_i_go], orb_go['r'][ind][-1]], [fgo.inistate['z'][ind_i_go], orb_go['z'][ind][-1]], color=col[np.mod(i,5)], marker='x')
     axcompare.scatter([fgo.inistate['r'][ind_i_go], orb_go['r'][ind][-1]], [fgo.inistate['z'][ind_i_go], orb_go['z'][ind][-1]], color=col[np.mod(i,5)], marker='x')
-    ax_Emu.scatter([dE[0], dE[-1]] , [mu_ini, mu[-1]], color=col[np.mod(i,5)], marker='x')
+    ax_Emu.scatter([energy[0]*1e-3, energy[-1]*1e-3] , [mu_ini, mu[-1]], color=col[np.mod(i,5)], marker='x')
     plot_tips.plot_tips(fgo, ind, ax_tips_rz, label='go')
     ###########################################################
     # GC
@@ -168,22 +190,23 @@ for i in range(3):
     #only initial points  - check
     ind_i_gc,mu_ini=evaluate_initial_quant(fgc.inistate, id_part)
     # evaluate derived quantities
-    ind, pitch, energy,mu, dE, pphi = evaluate_derived_quant(a5,orb_gc, id_part)
+    ind, pitch, energy,mu, dE, pphi, psi = evaluate_derived_quant(a5,orb_gc, id_part)
     energy=energy/1.602e-19; dE=dE/1.602e-19;
-    pphi=pphi/1.602e-19;
-
+    pphi=pphi/1.602e-19;mu=mu/1.602e-19;
+    if i==1:
+        axpsi.plot(psi, 'k')
     #orbits
     ax_gc_rhopitch.plot(orb_gc['rho'][ind], pitch, 'o', color=col[np.mod(i,5)])
     ax_gc_rz.plot(orb_gc['r'][ind], orb_gc['z'][ind], 'o', color=col[np.mod(i,5)])
     axcompare.plot(orb_gc['r'][ind], orb_gc['z'][ind], 'o', color=col[np.mod(i,5)], label='Gc')
-    ax_Emu.scatter(energy*1e-3, mu/(energy*1.602e-19), marker='o', color=col[np.mod(i,5)])
-    ax_pphimu.scatter(pphi,mu/(energy*1.602e-19),marker='o', color=col[np.mod(i,5)])
+    ax_Emu.scatter(energy*1e-3, mu, marker='o', color=col[np.mod(i,5)])
+    ax_pphimu.scatter(pphi,mu,marker='o', color=col[np.mod(i,5)])
 
     #only initial points
     ax_gc_rhopitch.scatter([fgc.inistate['rho'][ind_i_gc], orb_gc['rho'][ind][-1]], [pitch[0], pitch[-1]], marker='o', color=col[np.mod(i,5)])
     ax_gc_rz.scatter([fgc.inistate['r'][ind_i_gc], orb_gc['r'][ind][-1]], [fgc.inistate['z'][ind_i_gc], orb_gc['z'][ind][-1]], marker='o', color=col[np.mod(i,5)])
     axcompare.scatter([fgc.inistate['r'][ind_i_gc], orb_gc['r'][ind][-1]], [fgc.inistate['z'][ind_i_gc], orb_go['z'][ind][-1]], marker='o', color=col[np.mod(i,5)])
-    ax_Emu.scatter([dE[0], dE[-1]] , [mu_ini, mu[-1]], color=col[np.mod(i,5)], marker='o')
+    ax_Emu.scatter([energy[0]*1e-3, energy[-1]*1e-3], [mu_ini, mu[-1]], color=col[np.mod(i,5)], marker='o')
     plot_tips.plot_tips(fgc, ind, ax_tips_rz,  label='No Coll')
 
 

@@ -17,8 +17,11 @@ common_style()
 # fnocoll=f.run_0375315118
 
 f=a5.Ascot('/home/vallar/WORK/ASCOT/runs/SA_003/pnb_ripple/perp/run_lowres/ascot.h5')
-fcoll=f.run_1717140291
-fnocoll=f.run_0232038243
+#fcoll=f.run_1717140291 #GO
+#fnocoll=f.run_0232038243 #GO
+fcoll=f.run_2054526193 #GC
+fnocoll=f.run_1434905107 #GC
+
 
 
 orb_coll=fcoll.orbit.read()
