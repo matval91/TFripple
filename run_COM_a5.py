@@ -9,7 +9,7 @@ import COM_a5_class as c5
 import sys
 
 if len(sys.argv) == 4:
-    fname_eqdsk=sys.argv[1]
+    fname_a5=sys.argv[1]
     run = sys.argv[2]
     E=float(sys.argv[3])
 else:
@@ -17,5 +17,6 @@ else:
     run='run_1893662328'
     E=500
 print('Read input', fname_a5, run, str(E))
-
-eq=c5.COM_a5(fname_a5, run, E)
+debug=False
+plot=True
+eq=c5.COM_a5(fname_a5, run, E, debug=debug, plot=plot)

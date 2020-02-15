@@ -8,8 +8,8 @@ Created on Tue Feb 11 13:15:54 2020
 import COM_a5_class as c5
 import sys
 
-if len(sys.argv) == 5:
-    fname_eqdsk=sys.argv[1]
+if len(sys.argv) == 4:
+    fname_a5 =sys.argv[1]
     run = sys.argv[2]
     E=float(sys.argv[3])
 else:
@@ -19,4 +19,4 @@ else:
     
 print('Read input', fname_a5, run, str(E))
 
-c5.COM_a5_eq_markers(fname_a5, run, E, inistate=True)
+c5.COM_a5_eq_markers(fname_a5, run, E, inistate=False)

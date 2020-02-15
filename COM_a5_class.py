@@ -42,8 +42,12 @@ def COM_a5(fname_a5, run, Ekev=85, debug=0, plot=1):
     # Getting psi_2d (Normalized to edge and axis value) and interpolate it
     # THIS IS WEIRD!!! NEEDS DOUBLE/TRIPLE/QUADRUPLE CHECK!!!!
     psiw = b['psi1'][0]; psia=b['psi0'][0]
-    _R = np.linspace(b['psi_rmin'][0], b['psi_rmax'][0], b['psi_nr'][0])
-    _z = np.linspace(b['psi_zmin'][0], b['psi_zmax'][0], b['psi_nz'][0])
+    try:
+        _R = np.linspace(b['psi_rmin'][0], b['psi_rmax'][0], b['psi_nr'][0])
+        _z = np.linspace(b['psi_zmin'][0], b['psi_zmax'][0], b['psi_nz'][0])
+    except:
+        _R = np.linspace(b['rmin'][0], b['rmax'][0], b['nr'][0])
+        _z = np.linspace(b['zmin'][0], b['zmax'][0], b['nz'][0])
     psi2d_param = interp.interp2d(_R, _z, (b['psi'].T-psia)/(psiw-psia))
     #psi2d_param_notnorm = interp.interp2d(_R, _z, eq.psi)
     # Finding the axis R0 of the device, which is the one to use to normalize
@@ -56,11 +60,17 @@ def COM_a5(fname_a5, run, Ekev=85, debug=0, plot=1):
     #T is as function of psi (equidistant)
     if np.size(np.shape(b['bphi']))==3:
         B = np.mean(b['bphi'], axis=1)
+    else:
+        B = b['bphi']
     #Forcing B to be positive and decreasing in R
     B = np.abs(B)
     #Bphi and psi are not forcely on same grid, so need to redefine _R and _z
-    _R = np.linspace(b['b_rmin'][0], b['b_rmax'][0], b['b_nr'][0])
-    _z = np.linspace(b['b_zmin'][0], b['b_zmax'][0], b['b_nz'][0])
+    try:
+        _R = np.linspace(b['b_rmin'][0], b['b_rmax'][0], b['b_nr'][0])
+        _z = np.linspace(b['b_zmin'][0], b['b_zmax'][0], b['b_nz'][0])
+    except:
+        _R = np.linspace(b['rmin'][0], b['rmax'][0], b['nr'][0])
+        _z = np.linspace(b['zmin'][0], b['zmax'][0], b['nz'][0])
     B_param = interp.interp2d(_R, _z, B.T)
     Bmin = np.min(B_param(R,0)); Bmax=np.max(B_param(R,0))
 
@@ -76,7 +86,7 @@ def COM_a5(fname_a5, run, Ekev=85, debug=0, plot=1):
     
     # We want psi increasing from 0 to psi_wall
     psi=np.linspace(0,1, np.size(_R))
-    if psiw<psia or psiw==0:
+    if np.abs(psiw)<np.abs(psia) or psiw==0:
         psiw-=psia; psi-=psia; psia-=psia; # now stuff set from 0 to something.
         if psiw<0: 
             psiw=psiw*-1.; psi*=-1;
@@ -179,10 +189,11 @@ def COM_a5_markers(fname_a5='/home/vallar/WORK/ASCOT/runs/SA_003/nnb_ripple/prod
         print('No B0 nor R0!!')
         exit()
     a5obj, a5 = read_a5file(fname_a5, run)
-    if inistate:
-        state = a5obj.inistate.read()
-    else:
-        state = a5obj.endstate.read()
+    # print(inistate)
+    # if inistate:
+    #     state = a5obj.inistate.read()
+    # else:
+    state = a5obj.endstate.read()
 
     mu = state['mu']
     angmom=calculate_angmom(state, a5)
@@ -195,14 +206,14 @@ def COM_a5_markers(fname_a5='/home/vallar/WORK/ASCOT/runs/SA_003/nnb_ripple/prod
     return angmom, mu, x,y
 
 def COM_a5_eq_markers(fname_a5='/home/vallar/WORK/ASCOT/runs/SA_003/nnb_ripple/production/ascot.h5', 
-         run='run_1893662328', Ekev=85):
+         run='run_1893662328', Ekev=85, inistate=True):
     """
     """
     a5obj, a5 = read_a5file(fname_a5, run)
     b, B0, R0 = COM_a5(fname_a5, run, Ekev, debug=0, plot=1)
 
     ax=plt.gca();
-    angmom, mu, x,y = COM_a5_markers(fname_a5, run, Ekev, B0, R0)
+    angmom, mu, x,y = COM_a5_markers(fname_a5, run, Ekev, B0, R0, inistate=True)
     #ind_pitchpos = np.where(pdict['pitch']>0.)[0]
     #ind_pitchneg = np.where(pdict['pitch']<0.)[0]
     #ax.scatter(x[ind_pitchpos], y[ind_pitchpos], marker='o', label=r'$\xi>0.$', color='k')
