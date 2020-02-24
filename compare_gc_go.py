@@ -13,7 +13,7 @@ import a5py.marker.evaluate as eval_mrkr
 import numpy as np
 import matplotlib.pyplot as plt
 from utils.plot_utils import common_style, limit_labels, define_colors
-import plot_tips
+#import plot_tips
 common_style(labelsize=16)
 col, _,_,_,_ = define_colors()
 
@@ -122,7 +122,7 @@ file=a5class.Ascot(fname)
 #fgo=file.run_1744124558 # collisions
 #fgc=file.run_1659479300 # collisions
 
-fgo=file.run_0023840449 # no collisions
+fgo=file.run_1893662328 # no collisions, correct orbit diagnostics
 fgc=file.run_1357839974 # no collisions
 
 #file=a5.Ascot('/home/vallar/WORK/ASCOT/runs/SA_003/pnb_ripple/perp/run_lowres/ascot.h5')
@@ -153,7 +153,7 @@ ax_tips_rz = f4.add_subplot(121)
 ax_tips_rz.set_title('RZ tips')
 ax_tips_rhopitch = f4.add_subplot(122)
 fpsi=plt.figure(); axpsi=fpsi.add_subplot(111)
-for i in [1,4]:
+for i in [1,2,3,4]:
     # find indexes of interest
     id_part = fgc.inistate['id'][ind_gc[i]]
     print("No go. particle to wall")
@@ -184,6 +184,7 @@ for i in [1,4]:
     axcompare.scatter([fgo.inistate['r'][ind_i_go], orb_go['r'][ind][-1]], [fgo.inistate['z'][ind_i_go], orb_go['z'][ind][-1]], color=col[np.mod(i,5)], marker='x')
     ax_Emu.scatter([energy[0]*1e-3, energy[-1]*1e-3] , [mu_ini, mu[-1]], color=col[np.mod(i,5)], marker='x')
     plot_tips.plot_tips(fgo, ind, ax_tips_rz, label='go')
+    plt.figure(); plt.plot(pitch)
     ###########################################################
     # GC
     ###########################################################
@@ -231,6 +232,7 @@ limit_labels(ax_go_rz, 'r', 'z', 'go')
 limit_labels(axcompare, 'r', 'z')
 #limit_labels(ax_Emu, 'E [eV]', '$\mu$')
 limit_labels(ax_pphimu, '$P_{\phi}$', '$\mu$')
+limit_labels(ax_Emu, 'E', '$\mu$')
 
 #axcompare.legend(loc='best')
 ax_tips_rz.legend(loc='best'); ax_tips_rz.axis('equal')
