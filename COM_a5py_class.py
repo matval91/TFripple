@@ -24,30 +24,25 @@ from a5py.ascotpy.ascotpy import Ascotpy
 common_style()
 def read_a5file(fname_a5, run):
     """
-        a5obj, a5 = read_a5file(fname_a5, run)
+        a5obj = read_a5file(fname_a5, run)
     """
     a5file = a5class.Ascot(fname_a5)
     a5obj = a5file[run]
     a5 = Ascotpy(fname_a5); a5.init(bfield=True)
     return a5obj, a5
 
-def COM_a5(fname_a5, run, Ekev=85, debug=0, plot=1):
+def COM_a5(a5obj, Ekev=85, debug=0, plot=1):
     """ COM boundaries
     Plot COM boundary spaces given eqdsk and Ekev
     """
-    a5obj, a5 = read_a5file(fname_a5, run)
     b = a5obj.bfield.read()
 
     E=Ekev*1000*1.602e-19
     # Getting psi_2d (Normalized to edge and axis value) and interpolate it
     # THIS IS WEIRD!!! NEEDS DOUBLE/TRIPLE/QUADRUPLE CHECK!!!!
     psiw = b['psi1'][0]; psia=b['psi0'][0]
-    try:
-        _R = np.linspace(b['psi_rmin'][0], b['psi_rmax'][0], b['psi_nr'][0])
-        _z = np.linspace(b['psi_zmin'][0], b['psi_zmax'][0], b['psi_nz'][0])
-    except:
-        _R = np.linspace(b['rmin'][0], b['rmax'][0], b['nr'][0])
-        _z = np.linspace(b['zmin'][0], b['zmax'][0], b['nz'][0])
+    _R = np.linspace(b['psi_rmin'][0], b['psi_rmax'][0], b['psi_nr'][0])
+    _z = np.linspace(b['psi_zmin'][0], b['psi_zmax'][0], b['psi_nz'][0])
     psi2d_param = interp.interp2d(_R, _z, (b['psi'].T-psia)/(psiw-psia))
     #psi2d_param_notnorm = interp.interp2d(_R, _z, eq.psi)
     # Finding the axis R0 of the device, which is the one to use to normalize
@@ -55,30 +50,24 @@ def COM_a5(fname_a5, run, Ekev=85, debug=0, plot=1):
     if debug:
         print('R0={:.2f} vs old R0={:.2f} \n'.format(R0, b['axisr'][0]))
         
-    psi_on_midplane = psi2d_param(_R,b['axisz'][0])
+    psi_on_midplane = psi2d_param(_R,0)
     R = _R[psi_on_midplane<1.] #R on midplane inside lcfs
     #T is as function of psi (equidistant)
     if np.size(np.shape(b['bphi']))==3:
         B = np.mean(b['bphi'], axis=1)
-    else:
-        B = b['bphi']
     #Forcing B to be positive and decreasing in R
     B = np.abs(B)
     #Bphi and psi are not forcely on same grid, so need to redefine _R and _z
-    try:
-        _R = np.linspace(b['b_rmin'][0], b['b_rmax'][0], b['b_nr'][0])
-        _z = np.linspace(b['b_zmin'][0], b['b_zmax'][0], b['b_nz'][0])
-    except:
-        _R = np.linspace(b['rmin'][0], b['rmax'][0], b['nr'][0])
-        _z = np.linspace(b['zmin'][0], b['zmax'][0], b['nz'][0])
+    _R = np.linspace(b['b_rmin'][0], b['b_rmax'][0], b['b_nr'][0])
+    _z = np.linspace(b['b_zmin'][0], b['b_zmax'][0], b['b_nz'][0])
     B_param = interp.interp2d(_R, _z, B.T)
-    Bmin = np.min(B_param(R,b['axisz'][0])); Bmax=np.max(B_param(R,b['axisz'][0]))
+    Bmin = np.min(B_param(R,0)); Bmax=np.max(B_param(R,0))
 
-    T_on_midplane = B_param(R,b['axisz'][0])*R
+    T_on_midplane = B_param(R,0)*R
     T_param = interp.interp1d(R, T_on_midplane)
     
     Rmin = min(R); Rmax=max(R)
-    B0 = B_param(R0, b['axisz'][0])[0]
+    B0 = B_param(R0, 0)[0]
     #finding also extrema of g
     g_param=T_param
     gedge = np.abs(g_param(Rmax))
@@ -86,7 +75,7 @@ def COM_a5(fname_a5, run, Ekev=85, debug=0, plot=1):
     
     # We want psi increasing from 0 to psi_wall
     psi=np.linspace(0,1, np.size(_R))
-    if np.abs(psiw)<np.abs(psia) or psiw==0:
+    if psiw<psia or psiw==0:
         psiw-=psia; psi-=psia; psia-=psia; # now stuff set from 0 to something.
         if psiw<0: 
             psiw=psiw*-1.; psi*=-1;
@@ -139,26 +128,26 @@ def COM_a5(fname_a5, run, Ekev=85, debug=0, plot=1):
     #Trapped/passing boundary - UPPER
     trpp_up={}
     #step 1: find R(z=0, theta=0) at the psi wanted
-    psi_z0 = psi2d_param(R_notnorm[R_notnorm>=R0], b['axisz'][0])
+    psi_z0 = psi2d_param(R_notnorm[R_notnorm>=R0], 0)
     #Normalization
     psi_z0 = np.abs(psi_z0/R0*R0*B0)
     psi_z0 = psi_z0[psi_z0<1.]
     trpp_up['x'] = -1.*psi_z0;
     
     # step 2 : find B at the R>R0, with normalizations
-    B_theta0 = B_param(np.linspace(R0, max(R_notnorm), np.size(psi_z0)), b['axisz'][0]); B_theta0/=B0;
+    B_theta0 = B_param(np.linspace(R0, max(R_notnorm), np.size(psi_z0)), 0); B_theta0/=B0;
     trpp_up['y'] = (1./B_theta0);
     
     #Trapped/passing boundary - LOWER
     trpp_down={}
     #step 1: find R(z=0, theta=pi) at the psi wanted
-    psi_zpi = psi2d_param(R_notnorm[R_notnorm<=R0], b['axisz'][0])
+    psi_zpi = psi2d_param(R_notnorm[R_notnorm<=R0], 0)
     #Normalization
     psi_zpi = np.abs(psi_zpi/R0*R0*B0)
     psi_zpi = psi_zpi[psi_zpi<1.]
     trpp_down['x'] = -1.*psi_zpi;
     # step 2 : find B at the R>R0, with normalizations
-    B_thetapi = B_param(np.linspace(min(R_notnorm), R0, np.size(psi_zpi)), b['axisz'][0]); B_thetapi/=B0;
+    B_thetapi = B_param(np.linspace(min(R_notnorm), R0, np.size(psi_zpi)), 0); B_thetapi/=B0;
     trpp_down['y'] = (1/B_thetapi);
 
     if plot:
@@ -177,60 +166,36 @@ def COM_a5(fname_a5, run, Ekev=85, debug=0, plot=1):
         ax.grid('on')
         f.tight_layout()
         #f.savefig('COM_{:s}_E{:.2f}.png'.format(fname_eqdsk, Ekev), dpi=800)
-
+        plt.show()
+    
     return b, B0, R0
 
-def COM_a5_markers(fname_a5='/home/vallar/WORK/ASCOT/runs/SA_003/nnb_ripple/production/ascot.h5', \
-                run='run_1893662328', Ekev=85, B0=0, R0=0, inistate=True):
+def COM_markers(fname_a5='/home/vallar/WORK/ASCOT/runs/SA_003/nnb_ripple/production/ascot.h5', \
+                run='run_1893662328', Ekev=85):
     """
     """
-    if B0==0 and R0==0:
-        print('No B0 nor R0!!')
-        exit()
     a5obj, a5 = read_a5file(fname_a5, run)
-    # print(inistate)
-    # if inistate:
-    #     state = a5obj.inistate.read()
-    # else:
-    state = a5obj.endstate.read()
+    inistate = a5obj.inistate.read()
+    mu = inistate['mu']
+    angmom=calculate_angmom(inistate, a5)
 
-    mu = state['mu']
-    angmom=calculate_angmom(state, a5)
-
-    #b, B0, R0 = COM_a5(fname_a5, run, Ekev, debug=0, plot=1)
+    b, B0, R0 = COM_a5(a5obj, Ekev=1, debug=0, plot=0)
     mom_unit, energy_unit, mu_unit = _momentum_unit(B0, R0)
     x=angmom/mom_unit
     #y=mu*B0/(Ekev*1e3*1.602e-19)
     y=mu*B0/(Ekev*1e3)
+
     return angmom, mu, x,y
 
-def COM_a5_eq_markers(fname_a5='/home/vallar/WORK/ASCOT/runs/SA_003/nnb_ripple/production/ascot.h5', 
-         run='run_1893662328', Ekev=85, inistate=True):
+def COM_a5py_markers(fname_a5='/home/vallar/WORK/ASCOT/runs/SA_003/nnb_ripple/production/ascot.h5', 
+         run='run_1893662328', Ekev=85):
     """
     """
     a5obj, a5 = read_a5file(fname_a5, run)
-    b, B0, R0 = COM_a5(fname_a5, run, Ekev, debug=0, plot=1)
+    b, B0, R0 = COM_a5(a5obj, Ekev=Ekev, debug=0, plot=1)
 
-    #ax=plt.gca();
-    angmom, mu, x,y = COM_a5_markers(fname_a5, run, Ekev, B0, R0, inistate=inistate)
-    #ind_pitchpos = np.where(pdict['pitch']>0.)[0]
-    #ind_pitchneg = np.where(pdict['pitch']<0.)[0]
-    #ax.scatter(x[ind_pitchpos], y[ind_pitchpos], marker='o', label=r'$\xi>0.$', color='k')
-    #ax.scatter(x[ind_pitchneg], y[ind_pitchneg], marker='x', label=r'$\xi<0.$', color='k')
-    plt.scatter(x, y, marker='x', color='k')
-    plt.show()
-    #ax.legend(loc='best')
-    return angmom, mu, x,y, b
-
-def COM_a5_eq_trajectory(fname_a5='/home/vallar/WORK/ASCOT/runs/SA_003/nnb_ripple/production/ascot.h5', 
-         run='run_1893662328', Ekev=85, ind=[1]):
-    """
-    """
-    a5obj, a5 = read_a5file(fname_a5, run)
-    b, B0, R0 = COM_a5(fname_a5, run, Ekev, debug=0, plot=1)
-    
     ax=plt.gca();
-    angmom, mu, x,y = COM_a5_trajectory(fname_a5, run, Ekev, B0, R0, ind)
+    angmom, mu, x,y = COM_markers(fname_a5, run, Ekev)
     #ind_pitchpos = np.where(pdict['pitch']>0.)[0]
     #ind_pitchneg = np.where(pdict['pitch']<0.)[0]
     #ax.scatter(x[ind_pitchpos], y[ind_pitchpos], marker='o', label=r'$\xi>0.$', color='k')
@@ -239,27 +204,6 @@ def COM_a5_eq_trajectory(fname_a5='/home/vallar/WORK/ASCOT/runs/SA_003/nnb_rippl
     
     #ax.legend(loc='best')
     return angmom, mu, x,y, b
-
-def COM_a5_trajectory(fname_a5='/home/vallar/WORK/ASCOT/runs/SA_003/nnb_ripple/production/ascot.h5', \
-                run='run_1893662328', Ekev=85, B0=0, R0=0, ind=[1]):
-    """
-    """
-    if B0==0 and R0==0:
-        print('No B0 nor R0!!')
-        return
-    a5obj, a5 = read_a5file(fname_a5, run)
-    orb=a5obj.orbit.read()
-    angmom=calculate_angmom(orb, a5)
-    for ind_part in ind:
-        index = np.where(orb['id']==ind_part)[0]
-        mu = orb['mu'][index]
-        angmom = angmom[index]
-    #b, B0, R0 = COM_a5(fname_a5, run, Ekev, debug=0, plot=1)
-    mom_unit, energy_unit, mu_unit = _momentum_unit(B0, R0)
-    x=angmom/mom_unit
-    #y=mu*B0/(Ekev*1e3*1.602e-19)
-    y=mu*B0/(Ekev*1e3)
-    return angmom, mu, x,y
 
 def _momentum_unit(B,R):
     """
@@ -275,7 +219,7 @@ def _momentum_unit(B,R):
     mu_unit = mp*A/(Z*Z*q*q*R**2*B) #mu=mu[SI]*mu_unit
     return mom_unit, energy_unit, mu_unit
 
-def calculate_angmom(state, a5):
+def calculate_angmom(inistate, a5):
     """calc pphi
     Script to calculate canonical angular momentum, defined as
     P_ki = m x R x V_ki - Z x e x psi
@@ -295,15 +239,9 @@ def calculate_angmom(state, a5):
 
 
     """
-    psi   = a5.evaluate(state['r'], state['phi'], state['z'], 0, "psi")
-    try:
-        pphi  = eval_mrkr.eval_particle('ptor', mass=2.*1.66e-27, charge=state['charge']*1.602e-19,
-              R=state['r'], phi=None, z=None,
-              vR=state['vr'], vphi=state['vphi'], vz=state['vz'],
+    psi   = a5.evaluate(inistate['r'], inistate['phi'], inistate['z'], 0, "psi")
+    pphi  = eval_mrkr.eval_particle('ptor', mass=2.*1.66e-27, charge=inistate['charge']*1.602e-19,
+              R=inistate['r'], phi=None, z=None,
+              vR=inistate['vr'], vphi=inistate['vphi'], vz=inistate['vz'],
               BR=None, Bphi=None, Bz=None, psi=psi)
-    except:
-        pphi  = eval_mrkr.eval_guidingcenter('ptor', mass=2.*1.66e-27, charge=state['charge']*1.602e-19,
-              R=state['r'], phi=None, z=None,
-              vpar=state['vpar'], mu=state['mu'],
-              BR=state['br'], Bphi=state['bphi'], Bz=state['bz'], psi=psi)
     return pphi
