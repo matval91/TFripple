@@ -15,7 +15,7 @@ import numpy as np
 import matplotlib.pyplot as plt 
 import scipy.interpolate as interp
 from utils.plot_utils import common_style
-
+import scipy.constants as const
 import a5py.ascot5io.ascot5 as a5class
 import a5py.marker.evaluate as eval_mrkr
 from a5py.ascotpy.ascotpy import Ascotpy
@@ -28,7 +28,7 @@ def read_a5file(fname_a5, run):
     """
     a5file = a5class.Ascot(fname_a5)
     a5obj = a5file[run]
-    a5 = Ascotpy(fname_a5); a5.init(bfield=True)
+    a5 = Ascotpy(fname_a5); 
     return a5obj, a5
 
 def COM_a5(fname_a5, run, Ekev=85, debug=0, plot=1):
@@ -38,7 +38,7 @@ def COM_a5(fname_a5, run, Ekev=85, debug=0, plot=1):
     a5obj, a5 = read_a5file(fname_a5, run)
     b = a5obj.bfield.read()
 
-    E=Ekev*1000*1.602e-19
+    E=Ekev*1000*const.e
     # Getting psi_2d (Normalized to edge and axis value) and interpolate it
     # THIS IS WEIRD!!! NEEDS DOUBLE/TRIPLE/QUADRUPLE CHECK!!!!
     psiw = b['psi1'][0]; psia=b['psi0'][0]
@@ -98,7 +98,7 @@ def COM_a5(fname_a5, run, Ekev=85, debug=0, plot=1):
         print('psiw={:.2f}; psiax={:.2f}'.format(psiw, psia))
         
     # get normalized units
-    mp=1.67e-27; q=1.602e-19;
+    mp=const.m_p; q=const.e;
     A=2; Z=1;
     R_notnorm=np.copy(R); 
     B/=B0; Bmin/=B0; Bmax/=B0; #normalizing B
@@ -182,27 +182,50 @@ def COM_a5(fname_a5, run, Ekev=85, debug=0, plot=1):
 
 def COM_a5_markers(fname_a5='/home/vallar/WORK/ASCOT/runs/SA_003/nnb_ripple/production/ascot.h5', \
                 run='run_1893662328', Ekev=85, B0=0, R0=0, inistate=True):
-    """
+    """calculate COM of markers
+    
+    This scripts calculates the normalized constants of motion of the markers
+    
+    Parameters
+    ----------
+    fname_a5: str
+        Name of ascot5 result file where to read the input from
+        
+    run: str
+        string identifying the relevant results run to use
+    
+    Ekev: float
+        energy (in keV) to use for calculations of the normalized units
+        
+    B0: float
+        Value of B0 at the axis
+         
+    R0: float
+        major radius of the axis
+        
+    inistate: Bool
+        if True, the inistate will be plotted. 
+        if False, the endstate will be plotted
+        
+    Notes
+    ----------
     """
     if B0==0 and R0==0:
         print('No B0 nor R0!!')
         exit()
     a5obj, a5 = read_a5file(fname_a5, run)
-    # print(inistate)
-    # if inistate:
-    #     state = a5obj.inistate.read()
-    # else:
-    state = a5obj.endstate.read()
+    if inistate:
+        state = a5obj.inistate.read()
+        print('state=ini')
+    else:
+        state = a5obj.endstate.read()
+        print('state=end')
 
-    mu = state['mu']
-    angmom=calculate_angmom(state, a5)
-
-    #b, B0, R0 = COM_a5(fname_a5, run, Ekev, debug=0, plot=1)
+    angmom, pitch =calculate_angmom(state, a5)
     mom_unit, energy_unit, mu_unit = _momentum_unit(B0, R0)
     x=angmom/mom_unit
-    #y=mu*B0/(Ekev*1e3*1.602e-19)
-    y=mu*B0/(Ekev*1e3)
-    return angmom, mu, x,y
+    y=state['mu']*B0/(Ekev*1e3)
+    return angmom, state['mu'], pitch, x, y
 
 def COM_a5_eq_markers(fname_a5='/home/vallar/WORK/ASCOT/runs/SA_003/nnb_ripple/production/ascot.h5', 
          run='run_1893662328', Ekev=85, inistate=True):
@@ -211,16 +234,29 @@ def COM_a5_eq_markers(fname_a5='/home/vallar/WORK/ASCOT/runs/SA_003/nnb_ripple/p
     a5obj, a5 = read_a5file(fname_a5, run)
     b, B0, R0 = COM_a5(fname_a5, run, Ekev, debug=0, plot=1)
 
-    #ax=plt.gca();
-    angmom, mu, x,y = COM_a5_markers(fname_a5, run, Ekev, B0, R0, inistate=inistate)
-    #ind_pitchpos = np.where(pdict['pitch']>0.)[0]
-    #ind_pitchneg = np.where(pdict['pitch']<0.)[0]
-    #ax.scatter(x[ind_pitchpos], y[ind_pitchpos], marker='o', label=r'$\xi>0.$', color='k')
-    #ax.scatter(x[ind_pitchneg], y[ind_pitchneg], marker='x', label=r'$\xi<0.$', color='k')
-    plt.scatter(x, y, marker='x', color='k')
+    angmom, mu, pitch, x, y = COM_a5_markers(fname_a5, run, Ekev, B0, R0, inistate=inistate)
+
+    # finding particles hitting the wall
+    endstate = a5obj.endstate.read()
+    ind_wall = np.where(endstate['endcond']==8)[0]
+    if np.size(ind_wall)!=0:
+        ind_pitchpos_wall   = np.where(np.logical_and(pitch>0., endstate['endcond']==8))[0]
+        ind_pitchpos_nowall = np.where(np.logical_and(pitch>0., endstate['endcond']!=8))[0]
+        ind_pitchneg_wall   = np.where(np.logical_and(pitch<0., endstate['endcond']==8))[0]
+        ind_pitchneg_nowall = np.where(np.logical_and(pitch<0., endstate['endcond']!=8))[0]
+        
+        plt.scatter(x[ind_pitchpos_wall],   y[ind_pitchpos_wall],   marker='x', color='r')
+        plt.scatter(x[ind_pitchneg_wall],   y[ind_pitchneg_wall],   marker='o', color='r')
+        plt.scatter(x[ind_pitchpos_nowall], y[ind_pitchpos_nowall], marker='x', color='k')
+        plt.scatter(x[ind_pitchneg_nowall], y[ind_pitchneg_nowall], marker='o', color='k')
+    else:
+        ind_pitchpos = np.where(pitch>0.)[0]
+        plt.scatter(x[ind_pitchpos], y[ind_pitchpos], marker='x', color='k')
+        plt.scatter(x[~ind_pitchpos], y[~ind_pitchpos], marker='o', color='k')
+
     plt.show()
     #ax.legend(loc='best')
-    return angmom, mu, x,y, b
+    return angmom, mu, x, y, b
 
 def COM_a5_eq_trajectory(fname_a5='/home/vallar/WORK/ASCOT/runs/SA_003/nnb_ripple/production/ascot.h5', 
          run='run_1893662328', Ekev=85, ind=[1]):
@@ -230,7 +266,7 @@ def COM_a5_eq_trajectory(fname_a5='/home/vallar/WORK/ASCOT/runs/SA_003/nnb_rippl
     b, B0, R0 = COM_a5(fname_a5, run, Ekev, debug=0, plot=1)
     
     ax=plt.gca();
-    angmom, mu, x,y = COM_a5_trajectory(fname_a5, run, Ekev, B0, R0, ind)
+    angmom, mu, x, y = COM_a5_trajectory(fname_a5, run, Ekev, B0, R0, ind)
     #ind_pitchpos = np.where(pdict['pitch']>0.)[0]
     #ind_pitchneg = np.where(pdict['pitch']<0.)[0]
     #ax.scatter(x[ind_pitchpos], y[ind_pitchpos], marker='o', label=r'$\xi>0.$', color='k')
@@ -267,8 +303,8 @@ def _momentum_unit(B,R):
     E_unit = m*omega_0**2*R**2 = (m*v**2/2)*(2*R**2/rho**2)
     rho = mv/qB
     """
-    mp=1.66e-27; A=2;
-    q=1.602e-19; Z=1
+    mp=const.m_p; A=2;
+    q=const.e; Z=1
 
     mom_unit= Z*q*B*R**2 #pphi=pphi[SI]*pphi_unit
     energy_unit = mp*A/(Z*Z*q*q*R**2*B**2) #E=E[J]*energy_unit
@@ -295,15 +331,25 @@ def calculate_angmom(state, a5):
 
 
     """
+    a5.init(bfield=True)
     psi   = a5.evaluate(state['r'], state['phi'], state['z'], 0, "psi")
+    a5.free(bfield=True)
     try:
-        pphi  = eval_mrkr.eval_particle('ptor', mass=2.*1.66e-27, charge=state['charge']*1.602e-19,
+        pphi  = eval_mrkr.eval_particle('ptor', mass=2.*const.m_p, charge=state['charge']*const.e,
               R=state['r'], phi=None, z=None,
               vR=state['vr'], vphi=state['vphi'], vz=state['vz'],
               BR=None, Bphi=None, Bz=None, psi=psi)
-    except:
-        pphi  = eval_mrkr.eval_guidingcenter('ptor', mass=2.*1.66e-27, charge=state['charge']*1.602e-19,
+        pitch  = eval_mrkr.eval_particle('pitch', mass=2.*const.m_p, charge=state['charge']*const.e,
               R=state['r'], phi=None, z=None,
-              vpar=state['vpar'], mu=state['mu'],
+              vR=state['vr'], vphi=state['vphi'], vz=state['vz'],
+              BR=None, Bphi=None, Bz=None, psi=None)
+    except:
+        pphi  = eval_mrkr.eval_guidingcenter('ptor', mass=2.*const.m_p, charge=state['charge']*const.e,
+              R=state['r'], phi=None, z=None,
+              vpar=state['vpar'], mu=state['mu']*const.e,
               BR=state['br'], Bphi=state['bphi'], Bz=state['bz'], psi=psi)
-    return pphi
+        pitch  = eval_mrkr.eval_guidingcenter('pitch', mass=2.*const.m_p, charge=state['charge']*const.e,
+              R=state['r'], phi=None, z=None,
+              vpar=state['vpar'], mu=state['mu']*const.e,
+              BR=state['br'], Bphi=state['bphi'], Bz=state['bz'], psi=None)
+    return pphi, pitch
