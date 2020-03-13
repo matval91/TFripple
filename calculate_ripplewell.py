@@ -40,7 +40,6 @@ def readfield():
     R,z,ripple,B3D = readfield()
     """
     _,f,eqd=read_file()
-    bfield_id = 'bfield/B_3DS-3439715758'
     bphi = f['bfield/B_3DS-3439715758/B_phi'][()]
     #bR = f['bfield/B_3DS-3439715758/B_r'][()]
     #bz = f['bfield/B_3DS-3439715758/B_z'][()]
