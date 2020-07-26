@@ -9,7 +9,8 @@ pu.common_style()
 dir='/home/matval/WORK/ASCOT/runs/SA_003/ripple/nnb/2D';
 a=a5.Ascot(f'{dir}/ascot.h5')
 
-run=a.run_0045189131
+#run=a.run_0045189131
+run=a.active
 #B field
 #b2d = a.bfield.B_2DS_0346916261.read()
 b2d=run.bfield.read()
@@ -31,7 +32,7 @@ f=plt.figure(figsize=(6,10));
 ax=f.add_subplot(111);
 ax.contour(R_bfield, z_bfield, rho_pol.T, colors='k')
 ax.plot(wall['r'], wall['z'], 'k', lw=3)
-for i in [2,4,6,1]:
+for i in [31, 2,4,6, 1]: #keep this order for nice plot
 	ind=np.where(orbit.get('id')==i);
 	ax.plot(orbit.get('r')[ind], orbit.get('z')[ind])
 ax.set_xlabel(r'R [m]')
