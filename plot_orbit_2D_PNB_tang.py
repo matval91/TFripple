@@ -6,8 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 pu.common_style()
 
-dir='/home/matval'
-dir+='WORK/ASCOT/runs/SA_003/2D/tang'
+dir='/home/matval/'
+dir+='WORK/ASCOT/runs/SA_003/2D/tang/orbits'
 a=a5.Ascot(f'{dir}/ascot.h5')
 
 run=a.active
@@ -33,7 +33,8 @@ f=plt.figure(figsize=(6,10));
 ax=f.add_subplot(111);
 ax.contour(R_bfield, z_bfield, rho_pol.T, colors='k')
 ax.plot(wall['r'], wall['z'], 'k', lw=3)
-for i in np.unique(orbit.get('id')):
+particles_id=[ 1,  3,  6,  8,  9, 10, 11, 12, 13, 14]
+for i in [3,6, 9,12]:
 	ind=np.where(orbit.get('id')==i);
 	ax.plot(orbit.get('r')[ind], orbit.get('z')[ind])
 ax.set_xlabel(r'R [m]')

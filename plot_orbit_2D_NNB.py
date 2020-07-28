@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 pu.common_style()
 
-dir='/home/matval/
+dir='/home/matval/'
 dir+='/WORK/ASCOT/runs/SA_003/2D/nnb/orbits';
 a=a5.Ascot(f'{dir}/ascot.h5')
 
@@ -35,7 +35,7 @@ ax.contour(R_bfield, z_bfield, rho_pol.T, colors='k')
 ax.plot(wall['r'], wall['z'], 'k', lw=3)
 for i in [31, 2,4,6, 1]: #keep this order for nice plot
 	ind=np.where(orbit.get('id')==i);
-	ax.plot(orbit.get('r')[ind], orbit.get('z')[ind])
+	ax.plot(orbit.get('r')[ind], orbit.get('z')[ind], lw=1)
 ax.set_xlabel(r'R [m]')
 ax.set_ylabel(r'z [m]')
 ax.axis('equal')

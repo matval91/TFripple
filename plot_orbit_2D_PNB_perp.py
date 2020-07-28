@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 pu.common_style()
 
 dir='/home/matval/'
-dir+='WORK/ASCOT/runs/SA_003/2D/perp'
+dir+='WORK/ASCOT/runs/SA_003/2D/perp/orbits'
 a=a5.Ascot(f'{dir}/ascot.h5')
 
 run=a.run_1623561441
@@ -32,10 +32,11 @@ f=plt.figure(figsize=(6,10));
 ax=f.add_subplot(111);
 ax.contour(R_bfield, z_bfield, rho_pol.T, colors='k')
 ax.plot(wall['r'], wall['z'], 'k', lw=3)
-for i in range(10):
+for i in [1,7,10]:
 	ind=np.where(orbit.get('id')==i);
 	ax.plot(orbit.get('r')[ind], orbit.get('z')[ind])
 ax.set_xlabel(r'R [m]')
 ax.set_ylabel(r'z [m]')
 ax.axis('equal')
-f.tight_layout()
+f.tight_layout();
+plt.show();
