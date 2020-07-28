@@ -28,9 +28,9 @@ def plot_tips(run, ind, ax=0, label=''):
         ax=f.add_subplot(111)
         plot_flag=0
     pitch, ind_tips = _find_tips(run, ind)
-    ax.scatter(orb['r'][ind][ind_tips], orb['z'][ind][ind_tips], label=label)
-    w=run.wall.read() 
-    ax.plot(w['r'], w['z'], 'k')
+    ax.scatter(orb['r'][ind][ind_tips], orb['z'][ind][ind_tips], marker='x', label=label)
+    #w=run.wall.read() 
+    #ax.plot(w['r'], w['z'], 'k')
     if plot_flag==0:
         limit_labels(ax, 'R [m]', 'z [m]')
         ax.axis('equal')
@@ -44,7 +44,7 @@ def plot_deltaR_tips(run, ind, ax=0, label=''):
         ax=f.add_subplot(111)
         plot_flag=0
     pitch, ind_tips = _find_tips(run, ind)
-    ax.scatter(orb['r'][ind][ind_tips], orb['z'][ind][ind_tips], label=label)
+    ax.scatter(orb['r'][ind][ind_tips], orb['z'][ind][ind_tips], 'x', label=label)
     w=run.wall.read() 
     ax.plot(w['r'], w['z'], 'k')
     if plot_flag==0:
@@ -53,3 +53,23 @@ def plot_deltaR_tips(run, ind, ax=0, label=''):
 
     return    
 
+def plot_delta_tips(run, ind, ax=0, label=''):
+    orb=run.orbit.read()
+    plot_flag=1
+    if ax==0:
+        f=plt.figure()
+        ax=f.add_subplot(111)
+        plot_flag=0
+    pitch, ind_tips = _find_tips(run, ind)
+
+    delta = np.sqrt(np.diff(orb['r'][ind][ind_tips])**2+np.diff(orb['z'][ind][ind_tips])**2)
+    r = orb['r'][ind][ind_tips][1:-2]
+    z = orb['z'][ind][ind_tips][1:-2]
+    ax.contour(orb['r'][ind][ind_tips], orb['z'][ind][ind_tips])
+    w=run.wall.read() 
+    ax.plot(w['r'], w['z'], 'k')
+    if plot_flag==0:
+        limit_labels(ax, 'R [m]', 'z [m]')
+        ax.axis('equal')
+
+    return   

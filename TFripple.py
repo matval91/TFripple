@@ -1,12 +1,14 @@
 import matplotlib.pyplot as plt
 import a4py.classes.ReadEQDSK as ReadEQDSK
 import h5py
+import a5py.ascot5io.ascot5 as a5
 import numpy as np
 from utils.plot_utils import common_style, limit_labels, define_colors
 import scipy.interpolate as interp
-#from matplotlib.collections import LineCollection
-#from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib.lines import Line2D
+import sys
+sys.path.append('/home/matval/WORK/pythonscripts/python/')                                                                                           
+from a5py.ascotpy.ascotpy import Ascotpy
 
 common_style()
 _,_,_, my_cmap, _ = define_colors()
@@ -30,9 +32,11 @@ class TFripple():
         except:
             print('Impossible to read coil geometry')
             self.coils=[]
-        self.f=h5py.File(field_fname, 'r')
+        self.f=a5.Ascot(field_fname)
         self.eqd = ReadEQDSK.ReadEQDSK(eqd_fname)
-        
+        self.b5 = Ascotpy(field_fname)
+        self.b5.init(bfield=self.f.bfield.active.get_qid())
+
     def read_coilposition(self):
         """
         xTF,yTF,zTF = read_coilposition()
@@ -40,165 +44,165 @@ class TFripple():
         self.xTF = self.coils['TFcoil/coil_x']
         self.yTF = self.coils['TFcoil/coil_y']
         self.zTF = self.coils['TFcoil/coil_z']
-        
+
     def readfield(self):
         """
         R,z,ripple,B3D = readfield()
         """
-        bphi = self.f['bfield/B_3DS-3439715758/B_phi'][()]
+        bb = self.f.bfield.active.read()
+        bphi = bb['bphi']
         #bR = self.f['bfield/B_3DS-3439715758/B_r'][()]
         #bz = self.f['bfield/B_3DS-3439715758/B_z'][()]
-        _Rmin = self.f['bfield/B_3DS-3439715758/R_min'][()]
-        _Rmax = self.f['bfield/B_3DS-3439715758/R_max'][()]
-        _nR = int(self.f['bfield/B_3DS-3439715758/n_R'][()])
+        _Rmin = np.squeeze(bb['b_rmin'])
+        _Rmax = np.squeeze(bb['b_rmax'])
+        _nR = np.squeeze(bb['b_nr'])
         R=np.linspace(_Rmin, _Rmax, _nR)
-        _zmin = self.f['bfield/B_3DS-3439715758/z_min'][()]
-        _zmax = self.f['bfield/B_3DS-3439715758/z_max'][()]
-        _nz = int(self.f['bfield/B_3DS-3439715758/n_z'][()])
+        _zmin = np.squeeze(bb['b_zmin'])
+        _zmax = np.squeeze(bb['b_zmax'])
+        _nz = np.squeeze(bb['b_nz'])
         z=np.linspace(_zmin, _zmax, _nz)
-
-        _max = np.max(bphi, axis=0)
-        _min = np.min(bphi, axis=0)
-        ripple = np.abs((_max-_min)/self.eqd.B0EXP)
-        B3D_phi = bphi[11,:,:]
-        R = np.squeeze(R); z=np.squeeze(z)
+        self.nphi = np.squeeze(bb['b_nphi'])
         self.R = R
         self.z = z
-        self.ripple = ripple
-        self.B3D_phi = B3D_phi
-        return R,z,ripple,B3D_phi
+        self.ripple = self.b5.evaluateripple(R, z, 0, self.nphi)
+        return R,z,self.ripple
 
-    def define_from_eq(self):
+    def calculate_ripplewell(self):
         """
-        R_grid, z_grid, psi2D, q2d, B2D, epsilon, theta = define_from_eq()
         """
-        R_grid = self.eqd.R_grid.T; z_grid=self.eqd.Z_grid.T
-        psi2D=(self.eqd.psi-self.eqd.psiaxis)/(self.eqd.psiedge-self.eqd.psiaxis)
-        #psi2D=np.transpose(psi2D)
-        rho2D=np.sqrt(psi2D)
-        q = self.eqd.q; qparam=interp.interp1d(self.eqd.rhopsi, q, fill_value="extrapolate"); 
-        q2d = qparam(rho2D)
-        factor=self.eqd.B0EXP*self.eqd.R0EXP; B2D=factor/self.eqd.R_grid.T
-        epsilon = np.sqrt((self.eqd.R_grid-self.eqd.R0EXP)**2+self.eqd.Z_grid**2)/self.eqd.R0EXP;
-        theta = np.arctan2(self.eqd.Z_grid.T, self.eqd.R_grid.T-self.eqd.R0EXP)
-        self.R_grid = R_grid
-        self.z_grid = z_grid
-        self.psi2D = psi2D
-        self.q2d = q2d
-        self.B2D = B2D
-        self.epsilon = epsilon
-        self.theta = theta
-        self.rho2D = rho2D
+        self.readfield()
+        self.ripplewell=ascotpy.LibBfield.evaluateripplewell(self.R, self.z, 0, self.nphi)
+        return R,z, self.ripplewell
+    # def define_from_eq(self):
+    #     """
+    #     R_grid, z_grid, psi2D, q2d, B2D, epsilon, theta = define_from_eq()
+    #     """
+    #     R_grid = self.eqd.R_grid.T; z_grid=self.eqd.Z_grid.T
+    #     psi2D=(self.eqd.psi-self.eqd.psiaxis)/(self.eqd.psiedge-self.eqd.psiaxis)
+    #     #psi2D=np.transpose(psi2D)
+    #     rho2D=np.sqrt(psi2D)
+    #     q = self.eqd.q; qparam=interp.interp1d(self.eqd.rhopsi, q, fill_value="extrapolate"); 
+    #     q2d = qparam(rho2D)
+    #     factor=self.eqd.B0EXP*self.eqd.R0EXP; B2D=factor/self.eqd.R_grid.T
+    #     epsilon = np.sqrt((self.eqd.R_grid-self.eqd.R0EXP)**2+self.eqd.Z_grid**2)/self.eqd.R0EXP;
+    #     theta = np.arctan2(self.eqd.Z_grid.T, self.eqd.R_grid.T-self.eqd.R0EXP)
+    #     self.R_grid = R_grid
+    #     self.z_grid = z_grid
+    #     self.psi2D = psi2D
+    #     self.q2d = q2d
+    #     self.B2D = B2D
+    #     self.epsilon = epsilon
+    #     self.theta = theta
+    #     self.rho2D = rho2D
 
-        return R_grid, z_grid, psi2D, q2d, B2D, epsilon, theta, rho2D
+    #     return R_grid, z_grid, psi2D, q2d, B2D, epsilon, theta, rho2D
 
-    def interpolation(self):
-        """
-        param_ripple, q2dparam, B2dparam, param_epsilon,param_theta, flag_rectbi = interpolation()
-        """
+    # def interpolation(self):
+    #     """
+    #     param_ripple, q2dparam, B2dparam, param_epsilon,param_theta, flag_rectbi = interpolation()
+    #     """
 
-        R_grid, z_grid, psi2D, q2d, B2D, epsilon, theta, rho2D = self.define_from_eq()
-        R,z,ripple,B3D_phi = self.readfield()
-        #Interpolating on regular grid
-        if False:
-            param_ripple = interp.RectBivariateSpline(z,R, ripple)
-            q2dparam = interp.RectBivariateSpline(z_grid[:,0], R_grid[0,:], q2d, kx=3, ky=3, s=0)
-            B2Dparam = interp.RectBivariateSpline(z_grid[:,0], R_grid[0,:], B2D, kx=3, ky=3, s=0)
-            param_epsilon = interp.RectBivariateSpline(z_grid[:,0], R_grid[0,:], epsilon, kx=3, ky=3, s=0)
-            param_theta = interp.RectBivariateSpline(z_grid[:,0], R_grid[0,:], theta, kx=3, ky=3, s=0)
-            flag_rectbi=1
-        else:
-            param_ripple = interp.RegularGridInterpolator((R,z),ripple.T)
-            q2dparam = interp.RegularGridInterpolator((R_grid[0,:], z_grid[:,0]), q2d.T)
-            B2Dparam = interp.RegularGridInterpolator((R_grid[0,:], z_grid[:,0]), B2D.T)
-            param_epsilon = interp.RegularGridInterpolator((R_grid[0,:], z_grid[:,0]), epsilon.T)
-            param_theta = interp.RegularGridInterpolator((R_grid[0,:], z_grid[:,0]), theta.T)
-            flag_rectbi=0
+    #     R_grid, z_grid, psi2D, q2d, B2D, epsilon, theta, rho2D = self.define_from_eq()
+    #     R,z,ripple = self.readfield()
+    #     #Interpolating on regular grid
+    #     if False:
+    #         param_ripple = interp.RectBivariateSpline(z,R, ripple)
+    #         q2dparam = interp.RectBivariateSpline(z_grid[:,0], R_grid[0,:], q2d, kx=3, ky=3, s=0)
+    #         B2Dparam = interp.RectBivariateSpline(z_grid[:,0], R_grid[0,:], B2D, kx=3, ky=3, s=0)
+    #         param_epsilon = interp.RectBivariateSpline(z_grid[:,0], R_grid[0,:], epsilon, kx=3, ky=3, s=0)
+    #         param_theta = interp.RectBivariateSpline(z_grid[:,0], R_grid[0,:], theta, kx=3, ky=3, s=0)
+    #         flag_rectbi=1
+    #     else:
+    #         param_ripple = interp.RegularGridInterpolator((R,z),ripple)
+    #         q2dparam = interp.RegularGridInterpolator((R_grid[0,:], z_grid[:,0]), q2d)
+    #         B2Dparam = interp.RegularGridInterpolator((R_grid[0,:], z_grid[:,0]), B2D)
+    #         param_epsilon = interp.RegularGridInterpolator((R_grid[0,:], z_grid[:,0]), epsilon)
+    #         param_theta = interp.RegularGridInterpolator((R_grid[0,:], z_grid[:,0]), theta)
+    #         flag_rectbi=0
         
-        self.param_ripple = param_ripple
-        self.q2dparam =q2dparam
-        self.B2Dparam = B2Dparam
-        self.param_epsilon = param_epsilon
-        self.param_theta = param_theta
-        self.flag_rectbi = flag_rectbi
-        return param_ripple, q2dparam, B2Dparam, param_epsilon,param_theta, flag_rectbi
+    #     self.param_ripple = param_ripple
+    #     self.q2dparam =q2dparam
+    #     self.B2Dparam = B2Dparam
+    #     self.param_epsilon = param_epsilon
+    #     self.param_theta = param_theta
+    #     self.flag_rectbi = flag_rectbi
+    #     return param_ripple, q2dparam, B2Dparam, param_epsilon,param_theta, flag_rectbi
 
-    def calc_ripplewell_cyl(self):
-        """
-        R_grid, z_grid, ripplewell_cyl = calc_ripplewell_cyl()
-        """
-        try:
-            np.mean(self.R_grid)
-        except:
-            R_grid, z_grid, psi2D, q2d, B2D, epsilon, theta, rho2D = self.define_from_eq()
-        param_ripple, _, _, _, _,_ = self.interpolation()
-        # ### RIPPLE WELL with cylindrical tokamak
-        sintheta=np.sin(theta)
-        try:
-            newripple = param_ripple((R_grid, z_grid))
-        except:
-            newripple = param_ripple(z_grid[:,0], R_grid[0,:])
-        ripplewell_cyl = epsilon*np.abs(sintheta)/(N*q2d*np.abs(newripple))
-        self.R_grid = R_grid
-        self.z_grid = z_grid
-        self.ripplewell_cyl = ripplewell_cyl
-        return R_grid, z_grid, ripplewell_cyl
+    # def calc_ripplewell_cyl(self):
+    #     """
+    #     R_grid, z_grid, ripplewell_cyl = calc_ripplewell_cyl()
+    #     """
+    #     try:
+    #         np.mean(self.R_grid)
+    #     except:
+    #         R_grid, z_grid, psi2D, q2d, B2D, epsilon, theta, rho2D = self.define_from_eq()
+    #     param_ripple, _, _, _, _,_ = self.interpolation()
+    #     # ### RIPPLE WELL with cylindrical tokamak
+    #     sintheta=np.sin(theta)
+    #     try:
+    #         newripple = param_ripple((R_grid, z_grid))
+    #     except:
+    #         newripple = param_ripple(z_grid[:,0], R_grid[0,:])
+    #     ripplewell_cyl = epsilon*np.abs(sintheta)/(N*q2d*np.abs(newripple))
+    #     self.R_grid = R_grid
+    #     self.z_grid = z_grid
+    #     self.ripplewell_cyl = ripplewell_cyl
+    #     return R_grid, z_grid, ripplewell_cyl
 
-    def calculate_alpha(self):
-        """
-        R_alpha, z_alpha, grid = calculate_alpha()
-        """
-        R_grid, z_grid, psi2D, q2d, B2d, epsilon, theta,_ = self.define_from_eq()
-        param_ripple, q2dparam, B2Dparam, param_epsilon,param_theta, flag_rectbi = self.interpolation()
-        ## Doing the calculations for alpha!
-        ncont=35; 
-        cs = plt.contour(R_grid, z_grid, psi2D, np.linspace(0,1.1,ncont)); plt.clf()
-        plt.close()
-        #fig=plt.gcf()
-        #ax=fig.add_subplot(111)
-        alphamatrix = np.zeros([len(R_grid), len(z_grid)])
-        num_el = 221 #the maximum value possible! the first contour line is 227
-        R_alpha=np.array([]); z_alpha=np.array([]); alpha_alpha=np.array([])
 
-        for el in np.linspace(0,ncont-1,ncont, dtype=int):
-            try:
-                ll=cs.collections[el].get_paths()[0].vertices
-                _R = ll[:,0]; _z=ll[:,1]
-            except IndexError:
-                print("indexerror! at el ", el)
-                continue
+
+    # def calculate_alpha(self):
+    #     """
+    #     R_alpha, z_alpha, grid = calculate_alpha()
+    #     """
+    #     R_grid, z_grid, psi2D, q2d, B2d, epsilon, theta,_ = self.define_from_eq()
+    #     param_ripple, q2dparam, B2Dparam, param_epsilon,param_theta, flag_rectbi = self.interpolation()
+    #     ## Doing the calculations for alpha!
+    #     ncont=35; 
+    #     cs = plt.contour(R_grid, z_grid, psi2D, np.linspace(0,1.1,ncont)); 
+    #     plt.close()
+    #     alphamatrix = np.zeros([len(R_grid), len(z_grid)])
+    #     num_el = 221 #the maximum value possible! the first contour line is 227
+    #     R_alpha=np.array([]); z_alpha=np.array([]); alpha_alpha=np.array([])
+
+    #     for el in np.linspace(0,ncont-1,ncont, dtype=int):
+    #         try:
+    #             ll=cs.collections[el].get_paths()[0].vertices
+    #             _R = ll[:,0]; _z=ll[:,1]
+    #         except IndexError:
+    #             print("indexerror! at el ", el)
+    #             continue
             
-            _R = _R[np.linspace(0, len(_R)-1, num_el, dtype=int)]
-            _z = _z[np.linspace(0, len(_z)-1, num_el, dtype=int)]
+    #         _R = _R[np.linspace(0, len(_R)-1, num_el, dtype=int)]
+    #         _z = _z[np.linspace(0, len(_z)-1, num_el, dtype=int)]
+    #         #Finding B2d, ripple, q and theta on each psi surface
+    #         if flag_rectbi==1:
+    #             _q=np.array([]); _ripple=np.array([]); _epsilon = np.array([])
+    #             _B2D=np.array([]); _theta = np.array([]); 
+    #             for ee in range(num_el):
+    #                 _B2D = np.append(_B2D,B2Dparam(_z[ee], _R[ee])[0]) 
+    #                 _ripple = np.append(_ripple, param_ripple(_z[ee], _R[ee])[0])
+    #                 _q   = np.append(_q, q2dparam(_z[ee], _R[ee])[0])
+    #                 _theta = np.append(_theta, param_theta(_z[ee], _R[ee])[0])
+    #         else:
+    #             _B2D = B2Dparam((_R,_z))
+    #             _ripple = param_ripple((_R,_z))
+    #             _q = q2dparam((_R,_z))
+    #             _theta = param_theta((_R,_z))
+    #         dbdtheta = np.abs(np.diff(_B2D)/np.diff(_theta))
+    #         alpha = dbdtheta/(self.N*_q[1:]*_ripple[1:])
+    #         _R = _R[1:]; _z=_z[1:]
+    #         R_alpha=np.append(R_alpha, _R)
+    #         z_alpha=np.append(z_alpha, _z)
+    #         alpha_alpha=np.append(alpha_alpha, alpha)
 
-            if flag_rectbi==1:
-                _q=np.array([]); _ripple=np.array([]); _epsilon = np.array([])
-                _B2D=np.array([]); _theta = np.array([]); 
-                for ee in range(num_el):
-                    _B2D = np.append(_B2D,B2Dparam(_z[ee], _R[ee])[0]) 
-                    _ripple = np.append(_ripple, param_ripple(_z[ee], _R[ee])[0])
-                    _q   = np.append(_q, q2dparam(_z[ee], _R[ee])[0])
-                    _theta = np.append(_theta, param_theta(_z[ee], _R[ee])[0])
-            else:
-                _B2D = B2Dparam((_R,_z))
-                _ripple = param_ripple((_R,_z))
-                _q = q2dparam((_R,_z))
-                _theta = param_theta((_R,_z))
+    #     grid_x, grid_y = np.mgrid[1.5:4.5:200j, -3.:3:200j]
+    #     grid=interp.griddata(np.array([R_alpha,z_alpha]).T, alpha_alpha, (grid_x,grid_y))
 
-            dbdtheta = np.abs(np.diff(_B2D)/np.diff(_theta))
-            alpha = dbdtheta/(self.N*_q[1:]*_ripple[1:])
-            _R = _R[1:]; _z=_z[1:]
-            R_alpha=np.append(R_alpha, _R)
-            z_alpha=np.append(z_alpha, _z)
-            alpha_alpha=np.append(alpha_alpha, alpha)
-
-        grid_x, grid_y = np.mgrid[1.5:4.5:200j, -3.:3:200j]
-        grid=interp.griddata(np.array([R_alpha,z_alpha]).T, alpha_alpha, (grid_x,grid_y))
-
-        self.grid_x = grid_x
-        self.grid_y = grid_y
-        self.grid = grid
-        return grid_x, grid_y, grid
+    #     self.grid_x = grid_x
+    #     self.grid_y = grid_y
+    #     self.grid = grid
+    #     return grid_x, grid_y, grid
 
     def plot_ripplewell(self):
         """
