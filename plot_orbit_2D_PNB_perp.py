@@ -6,7 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 pu.common_style()
 
-dir='/home/matval/WORK/ASCOT/runs/SA_003/ripple/pnb/TFripple_w_plasma/perp/2D'
+dir='/home/matval/'
+dir+='WORK/ASCOT/runs/SA_003/2D/perp'
 a=a5.Ascot(f'{dir}/ascot.h5')
 
 run=a.run_1623561441
