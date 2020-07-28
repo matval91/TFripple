@@ -10,8 +10,8 @@ dir='/home/matval/'
 dir+='/WORK/ASCOT/runs/SA_003/2D/nnb/orbits';
 a=a5.Ascot(f'{dir}/ascot.h5')
 
-#run=a.run_0045189131
-run=a.active
+run=a.run_1764954427
+#run=a.active
 #B field
 #b2d = a.bfield.B_2DS_0346916261.read()
 b2d=run.bfield.read()
