@@ -7,7 +7,7 @@ from utils.plot_utils import common_style, limit_labels, define_colors
 import scipy.interpolate as interp
 from matplotlib.lines import Line2D
 import sys
-sys.path.append('/home/matval/WORK/pythonscripts/python/')                                                                                           
+#sys.path.append('/home/matval/WORK/pythonscripts/python/')                                                                                           
 from a5py.ascotpy.ascotpy import Ascotpy
 
 common_style()
@@ -16,14 +16,13 @@ _,_,_, my_cmap, _ = define_colors()
 class TFripple():
 
     def __init__(self, field_fname='/home/vallar/WORK/JT-60SA/3D/TFripple/ascot_TFcoilout_cocos5.h5',\
-        coils_fname='/home/vallar/WORK/JT-60SA/3D/JT60SA_3Dfield.h5',\
-        eqd_fname='/home/vallar/WORK/JT-60SA/input/003/JT-60SA_scenario2_highden_eqdsk_chease_cocos02_smoothed.geq'):
+        coils_fname='/home/vallar/WORK/JT-60SA/3D/JT60SA_3Dfield.h5'):
         """
         """
         self.N=18
-        self.read_file(field_fname, coils_fname, eqd_fname)
+        self.read_file(field_fname, coils_fname)
 
-    def read_file(self, field_fname, coils_fname, eqd_fname):
+    def read_file(self, field_fname, coils_fname):
         """ 
         coils,f,eqd = read_file()
         """ 
@@ -33,7 +32,7 @@ class TFripple():
             print('Impossible to read coil geometry')
             self.coils=[]
         self.f=a5.Ascot(field_fname)
-        self.eqd = ReadEQDSK.ReadEQDSK(eqd_fname)
+        #self.eqd = ReadEQDSK.ReadEQDSK(eqd_fname)
         self.b5 = Ascotpy(field_fname)
         self.b5.init(bfield=self.f.bfield.active.get_qid())
 
@@ -64,15 +63,17 @@ class TFripple():
         self.nphi = np.squeeze(bb['b_nphi'])
         self.R = R
         self.z = z
-        self.ripple = self.b5.evaluateripple(R, z, 0, self.nphi)
+        Rg, zg, tg = np.meshgrid(R, z, 0, indexing="ij")
+        self.ripple = self.b5.evaluateripple(Rg, zg, tg, self.nphi).reshape(R.size, z.size)
         return R,z,self.ripple
 
     def calculate_ripplewell(self):
         """
         """
         self.readfield()
-        self.ripplewell=ascotpy.LibBfield.evaluateripplewell(self.R, self.z, 0, self.nphi)
-        return R,z, self.ripplewell
+        Rg, zg, tg = np.meshgrid(self.R, self.z, 0, indexing="ij")
+        self.ripplewell = self.b5.evaluateripplewell(Rg, zg, tg, self.nphi).reshape(self.R.size, self.z.size)
+        return self.R, self.z, self.ripplewell
     # def define_from_eq(self):
     #     """
     #     R_grid, z_grid, psi2D, q2d, B2D, epsilon, theta = define_from_eq()
