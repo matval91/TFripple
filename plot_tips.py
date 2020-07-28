@@ -63,13 +63,12 @@ def plot_delta_tips(run, ind, ax=0, label=''):
     pitch, ind_tips = _find_tips(run, ind)
 
     delta = np.sqrt(np.diff(orb['r'][ind][ind_tips])**2+np.diff(orb['z'][ind][ind_tips])**2)
-    r = orb['r'][ind][ind_tips][1:-2]
-    z = orb['z'][ind][ind_tips][1:-2]
-    ax.contour(orb['r'][ind][ind_tips], orb['z'][ind][ind_tips])
+    CS=ax.scatter(orb['r'][ind][ind_tips][:-1], orb['z'][ind][ind_tips][:-1], c=delta, cmap='jet')
+    CB=plt.colorbar(CS)
     w=run.wall.read() 
-    ax.plot(w['r'], w['z'], 'k')
+    #ax.plot(w['r'], w['z'], 'k')
     if plot_flag==0:
         limit_labels(ax, 'R [m]', 'z [m]')
         ax.axis('equal')
-
-    return   
+ 
+    return ind_tips, delta

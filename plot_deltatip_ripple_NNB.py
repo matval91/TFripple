@@ -11,7 +11,8 @@ import plot_tips as pt
 pu.common_style()
 
 dir='/home/matval/WORK/ASCOT/runs/SA_003/ripple/pnb/TFripple_w_plasma/perp/2D'
-dir='/home/vallar/WORK/ASCOT/runs/SA_003/nnb_ripple/runs_2020/TFripple_newascot_20200728/'
+dir='/home/matval/WORK/ASCOT/runs/SA_003/ripple/nnb/2D/'
+#dir='/home/vallar/WORK/ASCOT/runs/SA_003/nnb_ripple/runs_2020/TFripple_newascot_20200728/'
 a=a5.Ascot(f'{dir}/ascot.h5')
 
 #run=a.run_1623561441
@@ -42,7 +43,7 @@ ind=np.arange(100)
 ind_particles=np.array([], dtype=int)
 for i in ind:
 	ind_particles = np.append(ind_particles, np.where(orbit.get('id')==i))
-pt.plot_tips(run, ind_particles, ax=ax, label='')
+pt.plot_delta_tips(run, ind_particles, ax=ax, label='')
 #CS=ax.contour(R, z,ripple.T*100., np.array([0.001, 0.01, 0.02])*100., colors=['b', 'r', 'g'], linewidths=2.)
 #cb=plt.colorbar(CS)
 #ax.contour(R, z, ripplewell.reshape(R.size, z.size), [1.], colors='k', linewidths=3.)
