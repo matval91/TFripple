@@ -1,4 +1,4 @@
-import sys
+import sys, os
 sys.path.append('/home/matval/WORK/pythonscripts')
 import utils.plot_utils as pu
 import a5py.ascot5io.ascot5 as a5
@@ -6,10 +6,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import TFripple as tfr
 import plot_tips as pt
-
-
 pu.common_style()
-dir='/home/vallar/WORK/ASCOT/runs/SA_003/pnb_ripple/TFripple_no_plasma/perp/runs_072020'
+dir='/home/vallar/'
+if os.uname().nodename!='spcpc182':
+    dir='/home/matval/'
+dir+='WORK/ASCOT/runs/SA_003/ripple/perp';
 a=a5.Ascot(f'{dir}/ascot.h5')
 
 #run=a.run_0998443778
@@ -35,8 +36,8 @@ f=plt.figure(figsize=(6,10));
 ax=f.add_subplot(111);
 ax.plot(wall['r'], wall['z'], 'k', lw=2, alpha=0.5)
 ind=[2,3,6,7,8]
-ind=a.active.endstate.get('endcond')==32
-ind=np.arange(10)
+ind=np.where(a.active.endstate.get('endcond')==32)[0]
+#ind=ind[1:10]
 ind_particles=np.array([], dtype=int)
 for i in ind:
 	ind_particles = np.append(ind_particles, np.where(orbit.get('id')==i))

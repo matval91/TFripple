@@ -38,7 +38,8 @@ f=plt.figure(figsize=(6,10));
 ax=f.add_subplot(111);
 ax.plot(wall['r'], wall['z'], 'k', lw=2, alpha=0.5)
 ind=[2,3,6,7,8]
-ind=a.active.endstate.get('endcond')==32
+ind=np.where(endstate.get('endcond')==32)
+ind=ind[1:30]
 ind_particles=np.array([], dtype=int)
 for i in ind:
 	ind_particles = np.append(ind_particles, np.where(orbit.get('id')==i))
