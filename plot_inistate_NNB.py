@@ -58,3 +58,17 @@ ax.set_ylabel(r'$z [m]$')
 ax.grid('on'); ax.axis('equal')
 f.tight_layout()
 plt.show()
+
+#rpitch
+f=plt.figure(figsize=(6,10));
+ax=f.add_subplot(111);
+# ax.contour(R_bfield, z_bfield, rho_pol.T, colors='k')
+# ax.plot(wall['r'], wall['z'], 'k', lw=3)
+# ax.scatter(inistate['r'][lhs>rhs], pitch[lhs>rhs], color='k',label='Passing') #PASSING
+# ax.scatter(inistate['r'][lhs<rhs], pitch[lhs<rhs], color='r', label='Trapped') #TRAPPED
+ax.scatter(inistate['r'], pitch, color='k') #PASSING
+ax.set_xlabel(r'$R [m]$')
+ax.set_ylabel(r'$\frac{v_{||}}{v}$')
+ax.grid('on');
+f.tight_layout()
+plt.show()
