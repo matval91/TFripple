@@ -10,9 +10,9 @@ pu.common_style()
 dir='/home/vallar/'
 if os.uname().nodename!='spcpc182':
     dir='/home/matval/'
-dir+='WORK/ASCOT/runs/SA_003/2D/nnb/orbits'
+dir+='WORK/ASCOT/runs/SA_003/ripple/perp';
 a=a5.Ascot(f'{dir}/ascot.h5')
-run=a.run_1593691660
+run=a.active
 #B field
 #b2d = a.bfield.B_2DS_0346916261.read()
 b2d=run.bfield.read()
