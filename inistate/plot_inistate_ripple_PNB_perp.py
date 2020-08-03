@@ -6,6 +6,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import a5py.marker.evaluate as evaluate
 from a5py.ascotpy.ascotpy import Ascotpy
+from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+
+
 pu.common_style()
 dir='/home/vallar/'
 if os.uname().nodename!='spcpc182':
@@ -64,10 +67,16 @@ f=plt.figure(figsize=(6,10));
 ax=f.add_subplot(111);
 b5.plotseparatrix(R,0,z,0, axes=ax)
 ax.plot(wall['r'], wall['z'], 'k', lw=3)
-ax.scatter(inistate['r'][lhs>rhs], inistate['z'][lhs>rhs], color='k',label='Passing') #PASSING
-ax.scatter(inistate['r'][lhs<rhs], inistate['z'][lhs<rhs], color='r', label='Trapped') #TRAPPED
-b5.plotripplewell(R, z, 0, nphi, axes=ax, clabel=False, clevel=[1],linestyles='--', linewidths=3 )
+ax.scatter(inistate['r'][lhs>rhs], inistate['z'][lhs>rhs], marker='x', color='k',label='Passing', alpha=0.5) #PASSING
+# ax.scatter(inistate['r'][lhs<rhs], inistate['z'][lhs<rhs], color='r', label='Trapped') #TRAPPED
+CS=ax.scatter(inistate['r'][lhs<rhs], inistate['z'][lhs<rhs], c=pitch[lhs<rhs], label='Trapped', cmap='jet') #TRAPPED
+ax2_divider = make_axes_locatable(ax)
+cax2 = ax2_divider.append_axes("top", size="7%", pad="2%")
+CB=plt.colorbar(CS, cax=cax2,  orientation="horizontal")
+cax2.xaxis.set_ticks_position("top")
 
+cax2.set_ylabel('$v_{\parallel}/v$', labelpad=25)  # cax == cb.ax
+b5.plotripplewell(R, z, 0, nphi, axes=ax, clabel=False, clevel=[1],linestyles='--', linewidths=3 )
 ax.legend(loc='best');ax.set_xlabel(r'$R [m]$')
 ax.set_ylabel(r'$z [m]$')
 ax.grid('on'); ax.axis('equal')
