@@ -21,7 +21,7 @@ def loads_on_flag(fname, flag):
 	return wallLoad_on_flag, x1x2x3, y1y2y3, z1z2z3
 
 	
-def plot_walloads(walload_on_flag, xx, yy, zz):
+def plot_walloads(walload_on_flag, xx, yy, zz, label=''):
 	"""
 	"""
 	import matplotlib
@@ -40,3 +40,4 @@ def plot_walloads(walload_on_flag, xx, yy, zz):
 			color=colors.to_hex(cmap(walload_on_flag[i]/max(walload_on_flag)))
 		srf = Poly3DCollection(verts,facecolor=color, edgecolor='#000000')
 		ax.add_collection3d(srf)
+	ax.set_title(label)
